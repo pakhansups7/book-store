@@ -1,15 +1,16 @@
-import { sortOptions } from "../../constants/sortOptions"
+import { sortOptions } from "../../constants/sortOptions";
+import type { SortValue } from "../../types/sort";
 
 type SortSelectProps = {
-    sortValue: string;
-    onSetSortValue: (newValue: string) => void;
-}
+    sortValue: SortValue;
+    onSetSortValue: (newValue: SortValue) => void;
+};
 
 export function SortSelect({ sortValue, onSetSortValue }: SortSelectProps) {
     return (
         <select
             value={sortValue}
-            onChange={(event) => onSetSortValue(event.target.value)}
+            onChange={(event) => onSetSortValue(event.target.value as SortValue)}
         >
             {sortOptions.map((option) => (
                 <option

@@ -1,6 +1,7 @@
 import type { Book } from "../types/book";
+import type { SortValue } from "../types/sort";
 
-export function sortBooks(books: Book[], sortValue: string) {
+export function sortBooks(books: Book[], sortValue: SortValue): Book[] {
     const sortedBooks = [...books];
 
     if (sortValue === "price-asc") {

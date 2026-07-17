@@ -1,6 +1,13 @@
-export const sortOptions = [
+import type { SortValue } from "../types/sort";
+
+export type SortOption = {
+    value: SortValue;
+    label: string;
+};
+
+export const sortOptions: SortOption[] = [
     {
-        value: "default",
+        value: 'default',
         label: "Default",
     },
     {

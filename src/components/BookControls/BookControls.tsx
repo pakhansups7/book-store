@@ -1,6 +1,7 @@
 import { SearchInput } from "../SearchInput/SearchInput";
 import { GenreFilter } from "../GenreFilter/GenreFilter";
 import { SortSelect } from "../SortSelect/SortSelect";
+import type { SortValue } from "../../types/sort";
 
 type BookControlsProps = {
     favoriteCount: number;
@@ -11,8 +12,8 @@ type BookControlsProps = {
     genres: string[];
     selectedGenre: string;
     onSetSelectedGenre: (newGenre: string) => void;
-    sortValue: string;
-    onSetSortValue: (newValue: string) => void;
+    sortValue: SortValue;
+    onSetSortValue: (newValue: SortValue) => void;
 };
 
 export function BookControls({
