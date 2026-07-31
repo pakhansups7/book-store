@@ -1,15 +1,18 @@
 import type { Book } from "../../types/book";
+import { CartActions } from "../CartActions/CartActions";
+import { FavoriteButton } from "../FavoriteButton/FavoriteButton";
 
 type BookCardProps = {
     book: Book;
     isFavorite: boolean;
+    quantityInCart: number;
     onAddToCart: () => void;
-    onToggleFavorite: () => void;
     onDecreaseCartItem: () => void;
     onRemoveFromCart: () => void;
+    onToggleFavorite: () => void;
 };
 
-export function BookCard({ book, isFavorite, onToggleFavorite, onAddToCart, onDecreaseCartItem, onRemoveFromCart }: BookCardProps) {
+export function BookCard({ book, quantityInCart, isFavorite, onAddToCart, onDecreaseCartItem, onRemoveFromCart, onToggleFavorite }: BookCardProps) {
     return (
         <li>
             {book.title}
@@ -18,10 +21,18 @@ export function BookCard({ book, isFavorite, onToggleFavorite, onAddToCart, onDe
             <p>{book.price}</p>
             <p>{book.rating}</p>
             <p>{book.description}</p>
-            <button onClick={onToggleFavorite}>{isFavorite ? "Удалить из избранного" : "Добавить в избранное"}</button>
-            <button onClick={onAddToCart}>Добавить в корзину</button>
-            <button onClick={onDecreaseCartItem}>-</button>
-            <button onClick={onRemoveFromCart}>Удалить из корзины</button>
+
+            <FavoriteButton
+                isFavorite={isFavorite}
+                onToggleFavorite={onToggleFavorite}
+            />
+
+            <CartActions
+                quantityInCart={quantityInCart}
+                onAddToCart={onAddToCart}
+                onDecreaseCartItem={onDecreaseCartItem}
+                onRemoveFromCart={onRemoveFromCart}
+            />
         </li>
     );
 }

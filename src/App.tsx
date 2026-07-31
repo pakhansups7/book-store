@@ -4,29 +4,33 @@ import { BookList } from "./components/BookList/BookList";
 import { BookControls } from "./components/BookControls/BookControls";
 import { sortBooks } from "./utils/sortBooks";
 import { filterBooks } from "./utils/filterBooks";
+import { CartDetails } from "./components/CartDetails/CartDetails";
 import type { SortValue } from "./types/sort";
 import type { CartItem } from "./types/cart";
 import { CartSummary } from "./components/CartSummary/CartSummary";
+import { getCartItemsFromStorage, saveCartItemsToStorage } from "./utils/cartStorage";
+import { getFavoriteBookIdsFromStorage, saveFavoriteBookIdsToStorage } from "./utils/favoriteStorage";
+import { getCartItemsCount, getCartTotal } from "./utils/cart";
 
 function App() {
     const [searchValue, setSearchValue] = useState("");
     const [selectedGenre, setSelectedGenre] = useState("All");
     const [sortValue, setSortValue] = useState<SortValue>("default");
     const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-    const [cartItems, setCartItems] = useState<CartItem[]>([]);
+    const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+        return getCartItemsFromStorage();
+    });
     const [favoriteBookIds, setFavoriteBookIds] = useState<number[]>(() => {
-        const savedFavoriteBookIds = localStorage.getItem("favoriteBookIds");
-
-        if (savedFavoriteBookIds) {
-            return JSON.parse(savedFavoriteBookIds);
-        }
-
-        return [];
+        return getFavoriteBookIdsFromStorage();
     });
 
     useEffect(() => {
-        localStorage.setItem("favoriteBookIds", JSON.stringify(favoriteBookIds));
+        saveFavoriteBookIdsToStorage(favoriteBookIds);
     }, [favoriteBookIds]);
+
+    useEffect(() => {
+        saveCartItemsToStorage(cartItems);
+    }, [cartItems]);
 
     const filteredBooks = filterBooks(
         books,
@@ -40,17 +44,15 @@ function App() {
 
     const sortedBooks = sortBooks(filteredBooks, sortValue);
 
-    const cartItemsCount = cartItems.reduce((acc, item) => {
-        return acc + item.quantity;
-    }, 0);
+    const cartItemsCount = getCartItemsCount(cartItems);
 
-    const cartTotal = cartItems.reduce((acc, item) => {
-        const currentBook = books.find((book) => book.id === item.bookId);
-        if (currentBook) {
-            return acc + currentBook.price * item.quantity;
-        }
-        return acc;
-    }, 0);
+    const cartTotal = getCartTotal(cartItems, books);
+
+    const hasActiveFilters =
+        searchValue !== "" ||
+        selectedGenre !== "All" ||
+        sortValue !== "default" ||
+        showFavoritesOnly;
 
     function toggleFavorite(bookId: number) {
         setFavoriteBookIds((prevFavoriteBookIds) => {
@@ -121,12 +123,31 @@ function App() {
         });
     }
 
+    function handleClearCart() {
+        setCartItems([]);
+    }
+
+    function handleResetFilters() {
+        setSearchValue("");
+        setSelectedGenre("All");
+        setSortValue("default");
+        setShowFavoritesOnly(false);
+    }
+
     return (
         <>
             <CartSummary
                 cartItemsCount={cartItemsCount}
                 cartTotal={cartTotal}
+                onClearCart={handleClearCart}
             />
+
+            {cartItemsCount > 0 && (
+                <CartDetails
+                    cartItems={cartItems}
+                    books={books}
+                />
+            )}
 
             <BookControls
                 favoriteCount={favoriteBookIds.length}
@@ -139,6 +160,8 @@ function App() {
                 onSetSelectedGenre={setSelectedGenre}
                 sortValue={sortValue}
                 onSetSortValue={setSortValue}
+                onResetFilters={handleResetFilters}
+                hasActiveFilters={hasActiveFilters}
             />
 
             {sortedBooks.length === 0 ? (
@@ -146,6 +169,7 @@ function App() {
             ) : (
                 <BookList
                     books={sortedBooks}
+                    cartItems={cartItems}
                     favoriteBookIds={favoriteBookIds}
                     onToggleFavorite={toggleFavorite}
                     onAddToCart={handleAddToCart}

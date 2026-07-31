@@ -14,6 +14,8 @@ type BookControlsProps = {
     onSetSelectedGenre: (newGenre: string) => void;
     sortValue: SortValue;
     onSetSortValue: (newValue: SortValue) => void;
+    onResetFilters: () => void;
+    hasActiveFilters: boolean;
 };
 
 export function BookControls({
@@ -27,6 +29,8 @@ export function BookControls({
                                  onSetSelectedGenre,
                                  sortValue,
                                  onSetSortValue,
+                                 onResetFilters,
+                                 hasActiveFilters,
                              }: BookControlsProps) {
     return (
         <div>
@@ -34,6 +38,10 @@ export function BookControls({
             <button onClick={onToggleShowFavoritesOnly}>
                 {showFavoritesOnly ? "Show all books" : "Show favorites only"}
             </button>
+
+            {hasActiveFilters && (
+                <button onClick={onResetFilters}>Reset filters</button>
+            )}
 
             <SearchInput
                 searchValue={searchValue}
