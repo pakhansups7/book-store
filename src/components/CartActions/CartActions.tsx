@@ -1,15 +1,22 @@
 
 type CartActionsProps = {
     quantityInCart: number;
+    isMaxQuantityReached: boolean;
     onAddToCart: () => void;
     onDecreaseCartItem: () => void;
     onRemoveFromCart: () => void;
 };
 
-export function CartActions({ quantityInCart, onAddToCart, onDecreaseCartItem, onRemoveFromCart }: CartActionsProps) {
+export function CartActions({ quantityInCart, onAddToCart, isMaxQuantityReached, onDecreaseCartItem, onRemoveFromCart }: CartActionsProps) {
+
     return (
         <>
-            <button onClick={onAddToCart}>Добавить в корзину</button>
+            <button
+                onClick={onAddToCart}
+                disabled={isMaxQuantityReached}
+            >
+                Добавить в корзину
+            </button>
 
             {quantityInCart > 0 && (
                 <p>In cart: {quantityInCart}</p>

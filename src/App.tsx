@@ -1,137 +1,130 @@
-import { useState, useEffect } from "react";
+import { useCart } from "./hooks/useCart";
+import { useFavorites } from "./hooks/useFavorites";
+import { useBookFilters } from "./hooks/useBookFilters";
 import { books } from "./data/books";
 import { BookList } from "./components/BookList/BookList";
 import { BookControls } from "./components/BookControls/BookControls";
-import { sortBooks } from "./utils/sortBooks";
-import { filterBooks } from "./utils/filterBooks";
 import { CartDetails } from "./components/CartDetails/CartDetails";
-import type { SortValue } from "./types/sort";
-import type { CartItem } from "./types/cart";
 import { CartSummary } from "./components/CartSummary/CartSummary";
-import { getCartItemsFromStorage, saveCartItemsToStorage } from "./utils/cartStorage";
-import { getFavoriteBookIdsFromStorage, saveFavoriteBookIdsToStorage } from "./utils/favoriteStorage";
-import { getCartItemsCount, getCartTotal } from "./utils/cart";
+import { getBookGenres } from "./utils/bookGenres";
+import { BookDetails } from "./components/BookDetails/BookDetails";
+import { useSelectedBook } from "./hooks/useSelectedBook";
+import { useEffect, useState } from "react";
+import { AddBookForm } from "./components/AddBookForm/AddBookForm";
+import type { Book } from "./types/book";
+import { getBooksFromStorage, saveBooksToStorage} from "./utils/bookStorage";
+import type { Order } from "./types/order";
 
 function App() {
-    const [searchValue, setSearchValue] = useState("");
-    const [selectedGenre, setSelectedGenre] = useState("All");
-    const [sortValue, setSortValue] = useState<SortValue>("default");
-    const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-    const [cartItems, setCartItems] = useState<CartItem[]>(() => {
-        return getCartItemsFromStorage();
+    const [bookList, setBookList] = useState<Book[]>(() => {
+        const booksFromStorage = getBooksFromStorage();
+
+        if (booksFromStorage.length === 0) {
+            return books;
+        }
+
+        return booksFromStorage;
     });
-    const [favoriteBookIds, setFavoriteBookIds] = useState<number[]>(() => {
-        return getFavoriteBookIdsFromStorage();
-    });
+    const [lastOrder, setLastOrder] = useState<Order | null>(null);
 
-    useEffect(() => {
-        saveFavoriteBookIdsToStorage(favoriteBookIds);
-    }, [favoriteBookIds]);
+    const {
+        favoriteBookIds,
+        toggleFavorite,
+    } = useFavorites();
 
-    useEffect(() => {
-        saveCartItemsToStorage(cartItems);
-    }, [cartItems]);
-
-    const filteredBooks = filterBooks(
-        books,
+    const {
         searchValue,
+        setSearchValue,
+
         selectedGenre,
+        setSelectedGenre,
+
+        sortValue,
+        setSortValue,
+
         showFavoritesOnly,
-        favoriteBookIds
-    );
 
-    const genres = ["All", ...new Set(books.map(book => book.genre))];
+        hasActiveFilters,
+        handleResetFilters,
+        handleToggleShowFavoritesOnly,
 
-    const sortedBooks = sortBooks(filteredBooks, sortValue);
+        visibleBooks,
+    } = useBookFilters(bookList, favoriteBookIds);
 
-    const cartItemsCount = getCartItemsCount(cartItems);
+    const {
+        cartItems,
+        cartItemsCount,
+        cartTotal,
+        handleAddToCart,
+        handleDecreaseCartItem,
+        handleRemoveFromCart,
+        handleClearCart
+    } = useCart(bookList);
 
-    const cartTotal = getCartTotal(cartItems, books);
+    const {
+        selectedBook,
+        handleSelectBook,
+        handleCloseBookDetails,
+    } = useSelectedBook(bookList);
 
-    const hasActiveFilters =
-        searchValue !== "" ||
-        selectedGenre !== "All" ||
-        sortValue !== "default" ||
-        showFavoritesOnly;
+    const genres = getBookGenres(bookList);
 
-    function toggleFavorite(bookId: number) {
-        setFavoriteBookIds((prevFavoriteBookIds) => {
-            const isFavorite = prevFavoriteBookIds.includes(bookId);
+    const isSelectedBookFavorite = selectedBook ? favoriteBookIds.includes(selectedBook.id) : false;
 
-            if (isFavorite) {
-                return prevFavoriteBookIds.filter((id) => id !== bookId);
-            }
+    const isBookListEmpty = visibleBooks.length === 0;
 
-            return [...prevFavoriteBookIds, bookId];
+    const isFavoritesEmpty = showFavoritesOnly && favoriteBookIds.length === 0;
+
+    const selectedBookCartItem = selectedBook ? cartItems.find((item) => item.bookId === selectedBook.id) : undefined;
+
+    const selectedBookQuantityInCart = selectedBookCartItem ? selectedBookCartItem.quantity : 0;
+
+    const isMaxQuantityReached = selectedBook ? selectedBookQuantityInCart >= selectedBook.stock : false;
+
+    function handleAddBook(newBook: Book) {
+        setBookList((prevBooks) => {
+            return [...prevBooks, newBook];
         });
     }
 
-    function handleAddToCart(bookId: number) {
-        setCartItems((prevCartItems) => {
-            const existingCartBook = prevCartItems.find((item) => item.bookId === bookId);
+    useEffect(() => {
+        saveBooksToStorage(bookList);
+    }, [bookList]);
 
-            if (existingCartBook) {
-                return prevCartItems.map((item) => {
-                    if (item.bookId === bookId) {
-                        return {
-                            ...item,
-                            quantity: item.quantity + 1,
-                        };
-                    }
+    function handleCheckout() {
+        if (cartItems.length === 0) {
+            return;
+        }
 
-                    return item;
-                });
+        const orderItems = cartItems.map((cartItem) => {
+            const currentBook = bookList.find((book) => book.id === cartItem.bookId);
+
+            if (!currentBook) {
+                return null;
             }
-            return [
-                ...prevCartItems,
-                {bookId: bookId, quantity: 1},
-            ];
-        });
-    }
+            return {
+                bookId: cartItem.bookId,
+                title: currentBook.title,
+                price: currentBook.price,
+                quantity: cartItem.quantity,
+                subtotal: currentBook.price * cartItem.quantity,
+            };
+        }).filter((orderItem) => orderItem !== null);
 
-    function handleDecreaseCartItem(bookId: number) {
-        setCartItems((prevCartItems) => {
-            const currentItem = prevCartItems.find((item) => {
-                return item.bookId === bookId;
-            });
+        const total = orderItems.reduce((acc, item) => {
+            return acc + item.subtotal;
+        }, 0);
 
-            if (!currentItem) {
-                return prevCartItems;
-            }
+        const order = {
+            id: Date.now(),
+            items: orderItems,
+            total: total,
+            createdAt: new Date().toISOString(),
+        }
 
-            if (currentItem.quantity === 1) {
-                return prevCartItems.filter((item) => {
-                    return item.bookId !== bookId;
-                });
-            }
+        setLastOrder(order);
 
-            return prevCartItems.map((item) => {
-                if (item.bookId === bookId) {
-                    return {
-                        ...item,
-                        quantity: item.quantity - 1,
-                    };
-                }
-                return item;
-            });
-        });
-    }
-
-    function handleRemoveFromCart(bookId: number) {
-        setCartItems((prevCartItems) => {
-            return prevCartItems.filter((item) => bookId !== item.bookId);
-        });
-    }
-
-    function handleClearCart() {
-        setCartItems([]);
-    }
-
-    function handleResetFilters() {
-        setSearchValue("");
-        setSelectedGenre("All");
-        setSortValue("default");
-        setShowFavoritesOnly(false);
+        handleClearCart();
     }
 
     return (
@@ -140,19 +133,33 @@ function App() {
                 cartItemsCount={cartItemsCount}
                 cartTotal={cartTotal}
                 onClearCart={handleClearCart}
+                onCheckout={handleCheckout}
             />
 
-            {cartItemsCount > 0 && (
-                <CartDetails
-                    cartItems={cartItems}
-                    books={books}
-                />
+            {lastOrder && (
+                <div>
+                    <p>Order placed successfully!</p>
+                    <p>Order ID : {lastOrder.id}</p>
+                    <p>Total: {lastOrder.total.toFixed(2)}</p>
+                </div>
             )}
+
+            <CartDetails
+                cartItems={cartItems}
+                books={bookList}
+                onAddToCart={handleAddToCart}
+                onDecreaseCartItem={handleDecreaseCartItem}
+                onRemoveFromCart={handleRemoveFromCart}
+            />
+
+            <AddBookForm
+                onAddBook={handleAddBook}
+            />
 
             <BookControls
                 favoriteCount={favoriteBookIds.length}
                 showFavoritesOnly={showFavoritesOnly}
-                onToggleShowFavoritesOnly={() => setShowFavoritesOnly((prev) => !prev)}
+                onToggleShowFavoritesOnly={handleToggleShowFavoritesOnly}
                 searchValue={searchValue}
                 onSetSearchValue={setSearchValue}
                 genres={genres}
@@ -164,20 +171,33 @@ function App() {
                 hasActiveFilters={hasActiveFilters}
             />
 
-            {sortedBooks.length === 0 ? (
-                <p>No books found</p>
-            ) : (
+            {(isBookListEmpty && isFavoritesEmpty) ? <p>No favorite books yet</p>: ( isBookListEmpty ?
+                <p>No books found</p> : (
                 <BookList
-                    books={sortedBooks}
+                    books={visibleBooks}
                     cartItems={cartItems}
+                    onSelectBook={handleSelectBook}
                     favoriteBookIds={favoriteBookIds}
                     onToggleFavorite={toggleFavorite}
                     onAddToCart={handleAddToCart}
                     onDecreaseCartItem={handleDecreaseCartItem}
                     onRemoveFromCart={handleRemoveFromCart}
                 />
-            )}
+            ))}
 
+            {selectedBook && (
+                <BookDetails
+                    book={selectedBook}
+                    onClose={handleCloseBookDetails}
+                    isMaxQuantityReached={isMaxQuantityReached}
+                    isFavorite={isSelectedBookFavorite}
+                    quantityInCart={selectedBookQuantityInCart}
+                    onAddToCart={() => handleAddToCart(selectedBook.id)}
+                    onDecreaseCartItem={() => handleDecreaseCartItem(selectedBook.id)}
+                    onRemoveFromCart={() => handleRemoveFromCart(selectedBook.id)}
+                    onToggleFavorite={() => toggleFavorite(selectedBook.id)}
+                />
+            )}
         </>
     );
 }
