@@ -122,6 +122,8 @@ function App() {
             createdAt: new Date().toISOString(),
         }
 
+
+
         setLastOrder(order);
 
         handleClearCart();
