@@ -1,7 +1,8 @@
+import { useEffect } from "react";
 import type { Book } from "../../types/book";
 import { FavoriteButton } from "../FavoriteButton/FavoriteButton";
 import { CartActions } from "../CartActions/CartActions";
-import "./BookDetails.css"
+import "./BookDetails.css";
 import { StockStatus } from "../StockStatus/StockStatus";
 
 type BookDetailsProps = {
@@ -16,8 +17,21 @@ type BookDetailsProps = {
     onClose: () => void;
 };
 
-export function BookDetails({ book, isFavorite, isMaxQuantityReached, quantityInCart, onAddToCart, onDecreaseCartItem, onToggleFavorite, onRemoveFromCart, onClose }: BookDetailsProps) {
-    const stock = book.stock;
+export function BookDetails({book, isFavorite, isMaxQuantityReached, quantityInCart, onAddToCart, onDecreaseCartItem, onToggleFavorite, onRemoveFromCart, onClose, }: BookDetailsProps) {
+
+    useEffect(() => {
+        function handleKeyDown(event: KeyboardEvent) {
+            if (event.key === "Escape") {
+                onClose();
+            }
+        }
+
+        window.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [onClose]);
 
     return (
         <div className="book-details-overlay" onClick={onClose}>
@@ -31,12 +45,10 @@ export function BookDetails({ book, isFavorite, isMaxQuantityReached, quantityIn
                 <p>{book.price}</p>
                 <p>{book.rating}</p>
                 <p>{book.description}</p>
-                <StockStatus
-                    stock={stock}
-                />
+
+                <StockStatus stock={book.stock} />
 
                 <button onClick={onClose}>Close</button>
-
 
                 <FavoriteButton
                     isFavorite={isFavorite}

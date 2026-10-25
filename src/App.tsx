@@ -13,7 +13,8 @@ import { useEffect, useState } from "react";
 import { AddBookForm } from "./components/AddBookForm/AddBookForm";
 import type { Book } from "./types/book";
 import { getBooksFromStorage, saveBooksToStorage} from "./utils/bookStorage";
-import type { Order } from "./types/order";
+import { OrderHistory } from "./components/OrderHistory/OrderHistory";
+import { useOrders } from "./hooks/useOrders";
 
 function App() {
     const [bookList, setBookList] = useState<Book[]>(() => {
@@ -25,7 +26,13 @@ function App() {
 
         return booksFromStorage;
     });
-    const [lastOrder, setLastOrder] = useState<Order | null>(null);
+
+    const {
+        lastOrder,
+        orders,
+        handleAddOrder,
+        handleClearOrders,
+    } = useOrders();
 
     const {
         favoriteBookIds,
@@ -97,11 +104,14 @@ function App() {
         }
 
         const orderItems = cartItems.map((cartItem) => {
-            const currentBook = bookList.find((book) => book.id === cartItem.bookId);
+            const currentBook = bookList.find(
+                (book) => book.id === cartItem.bookId
+            );
 
             if (!currentBook) {
                 return null;
             }
+
             return {
                 bookId: cartItem.bookId,
                 title: currentBook.title,
@@ -120,12 +130,26 @@ function App() {
             items: orderItems,
             total: total,
             createdAt: new Date().toISOString(),
-        }
+        };
 
+        setBookList((prevBooks) => {
+            return prevBooks.map((book) => {
+                const cartItem = cartItems.find(
+                    (item) => item.bookId === book.id
+                );
 
+                if (!cartItem) {
+                    return book;
+                }
 
-        setLastOrder(order);
+                return {
+                    ...book,
+                    stock: book.stock - cartItem.quantity,
+                };
+            });
+        });
 
+        handleAddOrder(order);
         handleClearCart();
     }
 
@@ -145,6 +169,11 @@ function App() {
                     <p>Total: {lastOrder.total.toFixed(2)}</p>
                 </div>
             )}
+
+            <OrderHistory
+                orders={orders}
+                onClearOrders={handleClearOrders}
+            />
 
             <CartDetails
                 cartItems={cartItems}

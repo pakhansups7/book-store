@@ -26,7 +26,7 @@ type AddBookFormProps = {
 };
 
 export function AddBookForm({ onAddBook }: AddBookFormProps) {
-    const [formData, setFormData] = useState<AddBookFormData>({
+    const initialFormData: AddBookFormData = {
         title: "",
         author: "",
         genre: "",
@@ -35,7 +35,9 @@ export function AddBookForm({ onAddBook }: AddBookFormProps) {
         cover: "",
         description: "",
         stock: "",
-    });
+    };
+
+    const [formData, setFormData] = useState<AddBookFormData>(initialFormData);
 
     const [errors, setErrors] = useState<AddBookFormErrors>({});
 
@@ -106,16 +108,7 @@ export function AddBookForm({ onAddBook }: AddBookFormProps) {
         onAddBook(newBook);
         setErrors({});
 
-        setFormData({
-            title: "",
-            author: "",
-            genre: "",
-            price: "",
-            rating: "",
-            cover: "",
-            description: "",
-            stock: "",
-        })
+        setFormData(initialFormData);
     }
 
     return (
